@@ -1,0 +1,51 @@
+{
+  "settings": {
+    "model": "thermal_hopping",
+    "n_columns": 200,
+    "n_monolayers": 50,
+    "n_runs": 4,
+    "n_points": 5,
+    "temperature": 350.0,
+    "flux": 1.0,
+    "e_bond": 0.2,
+    "e_diff": 0.8,
+    "nu0": 10000000000000.0,
+    "max_hops": 10000.0,
+    "seed": 42,
+    "epsilon": 6.6311532124260495,
+    "hops_per_landing": 30.23479335939364,
+    "temperatures": [
+      300,
+      325,
+      350,
+      375,
+      400,
+      425,
+      450,
+      475,
+      500,
+      525,
+      550
+    ],
+    "fluxes": [
+      0.01,
+      0.1,
+      1.0,
+      10.0,
+      100.0,
+      1000.0
+    ]
+  },
+  "summary": {
+    "recommended": {
+      "temperature": 375,
+      "flux": 0.01,
+      "n_columns": 200,
+      "n_monolayers": 100
+    }
+  },
+  "created_utc": "2026-10-12T03:11:39+00:00",
+  "python": "3.12.8",
+  "numpy": "2.5.3",
+  "pandas": "3.0.6"
+}

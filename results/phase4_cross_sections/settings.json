@@ -1,0 +1,31 @@
+{
+  "settings": {
+    "model": "trench_filling",
+    "width": 128,
+    "trench_width": 12,
+    "trench_depth": 16,
+    "base": 3,
+    "n_monolayers": 24,
+    "temperature": 300.0,
+    "flux": 1.0,
+    "e_bond": 0.1,
+    "e_diff": 0.8,
+    "nu0": 10000000000000.0,
+    "max_hops": 3000,
+    "n_runs": 6,
+    "seed": 42,
+    "epsilon": 3.8681727072485286,
+    "hops_per_atom": 0.3635729010340396,
+    "temperatures": [
+      280.0,
+      370.0,
+      430.0,
+      500.0
+    ]
+  },
+  "summary": {},
+  "created_utc": "2026-10-11T11:10:14+00:00",
+  "python": "3.12.8",
+  "numpy": "2.5.3",
+  "pandas": "3.0.6"
+}

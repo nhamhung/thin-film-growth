@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "model": "random_deposition",
+    "n_columns": 200,
+    "n_monolayers": 1000,
+    "n_runs": 30,
+    "n_points": 40,
+    "seed": 42
+  },
+  "summary": {
+    "beta": 0.5028911788768851,
+    "beta_std_error": 0.0005071704865062587,
+    "beta_expected": 0.5
+  },
+  "created_utc": "2026-10-11T11:09:38+00:00",
+  "python": "3.12.8",
+  "numpy": "2.5.3",
+  "pandas": "3.0.6"
+}

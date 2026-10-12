@@ -1,0 +1,416 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
+  :root { --bg: #0b0f14; --panel: #121922; --panel-2: #0e141b; --line: #243140; --text: #d5e1ec; --muted: #7b8a99;
+          --cyan: #38d6e8; --amber: #f5b031; --green: #3ddc84; --red: #ff5a4e;
+          --mono: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 12px; }
+  .wrap { display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line);
+          background: var(--panel-2); font-size: 11px; color: var(--muted); }
+  .head.caps { letter-spacing: .06em; text-transform: uppercase; }
+  .head .grow { flex: 1; }
+  .head b { color: var(--text); }
+  .led { width: 9px; height: 9px; border-radius: 50%; background: #39424d; display: inline-block; }
+  .led.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .led.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .led.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .led.cyan { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+  .stepper { display: flex; gap: 4px; }
+  .step { flex: 1; text-align: center; padding: 7px 4px; font-size: 11px; letter-spacing: .08em; color: var(--muted);
+          background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+  .step.done { color: var(--green); border-color: #1f4b33; }
+  .step.active { color: #071016; background: var(--cyan); border-color: var(--cyan); font-weight: 600; }
+  .top { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; }
+  .readouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+  .ro { background: var(--panel); padding: 7px 10px; }
+  .ro .k { font-size: 10px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .ro .v { font-size: 16px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ro .v small { font-size: 11px; color: var(--muted); }
+  .views { display: grid; gap: 8px; }
+  .view { cursor: pointer; }
+  .view.selected { border-color: #3b5368; }
+  .chip { font-size: 10px; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); }
+  .chip.PASS { color: #071016; background: var(--green); border-color: var(--green); }
+  .chip.FAIL { color: #fff; background: var(--red); border-color: var(--red); }
+  .chip.MONITOR { color: var(--cyan); border-color: var(--cyan); }
+  canvas { display: block; width: 100%; }
+  .metrics { color: var(--muted); padding: 6px 10px; border-top: 1px solid var(--line); display: flex; gap: 16px; flex-wrap: wrap; }
+  .metrics b { color: var(--text); font-weight: 600; }
+  .controls { display: flex; align-items: center; gap: 8px; padding: 8px 10px; flex-wrap: wrap; }
+  button, select { font-family: var(--mono); font-size: 12px; color: var(--text); background: #18212c; border: 1px solid var(--line);
+                   border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+  button:hover { border-color: var(--cyan); }
+  button.primary { background: var(--cyan); color: #071016; border-color: var(--cyan); font-weight: 600; min-width: 92px; }
+  .seg { display: inline-flex; }
+  .seg button { border-radius: 0; }
+  .seg button:first-child { border-radius: 4px 0 0 4px; }
+  .seg button:last-child { border-radius: 0 4px 4px 0; }
+  .seg button.on { background: #24384a; border-color: var(--cyan); color: var(--cyan); }
+  input[type=range] { flex: 1; min-width: 140px; accent-color: var(--cyan); }
+  .flabel { color: var(--muted); min-width: 150px; text-align: right; }
+  label.cb { font-size: 11px; color: var(--muted); display: flex; gap: 5px; align-items: center; }
+  @media (max-width: 760px) { .top { grid-template-columns: 1fr; } .views { grid-template-columns: 1fr !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stepper" id="stepper"></div>
+  <div class="top">
+    <div class="panel">
+      <div class="head caps"><span class="led" id="led-run"></span><span id="chamber-title">Process chamber</span><span class="grow"></span>
+        <span>VAC</span><span class="led" id="led-vac"></span><span>HEAT</span><span class="led" id="led-heat"></span><span>RF</span><span class="led" id="led-rf"></span></div>
+      <canvas id="chamber" height="300"></canvas>
+    </div>
+    <div class="panel">
+      <div class="head caps"><span>Tool readouts</span><span class="grow"></span><span id="ro-recipe"></span></div>
+      <div class="readouts" id="readouts"></div>
+      <div class="head caps" style="border-top:1px solid var(--line)"><span id="trace-title"></span></div>
+      <canvas id="trace" height="112"></canvas>
+    </div>
+  </div>
+  <div class="views" id="views"></div>
+  <div class="panel controls">
+    <button class="primary" id="play">▶ RUN</button>
+    <button id="restart" title="Restart the sequence">⟲</button>
+    <input type="range" id="scrub" min="0" value="0" step="1" aria-label="frame">
+    <span class="flabel" id="flabel"></span>
+    <select id="speed" title="Playback speed"><option value="6">0.5×</option><option value="12" selected>1×</option><option value="24">2×</option><option value="48">4×</option></select>
+    <span class="seg"><button id="v-insitu" class="on">IN-SITU</button><button id="v-sem">SEM</button></span>
+    <label class="cb"><input type="checkbox" id="skip"> skip intro</label>
+  </div>
+</div>
+<script>
+const P = __PAYLOAD__;
+const STEPS = ["LOAD", "PUMP DOWN", "HEAT CHUCK", "DEPOSIT", "COOL", "INSPECT"];
+const STEP_MS = [700, 800, 1000, null, 700, 0];
+const DEPOSIT = 3, INSPECT = 5, ROOM_K = 295;
+const COLORS = ["#38d6e8", "#f5b031"];
+const BAR = 24;                       // caption strip at the bottom of each cross-section
+
+// ---------- decode ----------
+function b64bytes(s) { const bin = atob(s); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
+for (const w of P.wafers) {
+  if (w.kind === "1d") {
+    w.heights = new Uint16Array(b64bytes(w.heights_b64).buffer);
+    w.hmax = 1; for (const h of w.heights) if (h > w.hmax) w.hmax = h;
+    // AFM colour range: largest |h - mean| over the whole run, so contrast is comparable between frames
+    w.afmRange = 1;
+    for (let k = 0; k <= w.n_frames; k++) {
+      let s = 0; for (let x = 0; x < w.n_columns; x++) s += w.heights[k * w.n_columns + x];
+      const m = s / w.n_columns;
+      for (let x = 0; x < w.n_columns; x++) w.afmRange = Math.max(w.afmRange, Math.abs(w.heights[k * w.n_columns + x] - m));
+    }
+  } else {
+    w.substrate = b64bytes(w.substrate_b64); w.arrival = b64bytes(w.arrival_b64); w.voidStart = b64bytes(w.void_start_b64);
+  }
+}
+const F = P.wafers[0].n_frames;
+const S = { step: 0, t: 0, frame: 0, playing: !!P.autoplay, view: "insitu", autoSem: true, chuckK: ROOM_K,
+            vac: false, loadX: 0, sel: 0, last: performance.now() };
+
+// ---------- DOM ----------
+const stepper = document.getElementById("stepper");
+STEPS.forEach((s, i) => { const d = document.createElement("div"); d.className = "step"; d.id = "st" + i; d.textContent = `${i + 1} · ${s}`; stepper.appendChild(d); });
+const views = document.getElementById("views");
+views.style.gridTemplateColumns = `repeat(${P.wafers.length}, minmax(0, 1fr))`;
+P.wafers.forEach((w, i) => {
+  const v = document.createElement("div"); v.className = "panel view" + (i === 0 ? " selected" : ""); v.id = "view" + i;
+  v.title = "Click to show this wafer's recipe in the chamber";
+  v.innerHTML = `<div class="head"><span class="led" style="background:${COLORS[i]};box-shadow:0 0 8px ${COLORS[i]}"></span>
+      <b style="color:${COLORS[i]}">${w.wafer}</b><b>${w.label}</b><span class="grow"></span>
+      <span>${w.recipe}</span><span class="chip" id="chip${i}">IN PROGRESS</span></div>
+    <canvas id="xs${i}" height="${w.kind === "1d" ? 240 : 300}"></canvas>
+    ${w.kind === "1d" ? `<canvas id="afm${i}" height="40"></canvas>` : ""}
+    <div class="metrics" id="m${i}"></div>`;
+  v.addEventListener("click", () => { S.sel = i; document.querySelectorAll(".view").forEach((e, j) => e.classList.toggle("selected", j === i)); });
+  views.appendChild(v);
+});
+const scrub = document.getElementById("scrub"); scrub.max = F;
+
+// ---------- helpers ----------
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const fmt = (x, d = 2) => (x === null || x === undefined || Number.isNaN(x)) ? "—" : Number(x).toFixed(d);
+function fitCanvas(c) { const w = Math.max(50, Math.round(c.getBoundingClientRect().width)); if (c.width !== w) c.width = w; return [c.width, c.height]; }
+function hash(x, y) { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+const FILM_EARLY = [24, 170, 196], FILM_LATE = [116, 140, 255];
+const bandSize = Math.max(1, Math.round(F / 8));
+function filmColor(band) {
+  const t = F > 1 ? clamp((band - 1) / (F - 1), 0, 1) : 0;
+  const c = FILM_EARLY.map((a, j) => a + (FILM_LATE[j] - a) * t);
+  return Math.floor((band - 1) / bandSize) % 2 ? c.map(v => v * 0.82) : c;
+}
+function tempColor(k) { const t = clamp((k - ROOM_K) / (600 - ROOM_K), 0, 1);
+  return `rgb(${Math.round(58 + 197 * t)},${Math.round(64 + 46 * t)},${Math.round(72 - 46 * t)})`; }
+const setpoint = () => P.wafers[S.sel].temperature || ROOM_K;
+
+// ---------- rasterise one frame to per-pixel labels: 0 empty, 1 substrate, 2 film, 3 void ----------
+function labels1d(w, k, W, Hc) {
+  const H = Hc - BAR, N = w.n_columns, sub = Math.round(H * 0.14), s = (H - sub - 10) / w.hmax;
+  const type = new Uint8Array(W * Hc), band = new Uint8Array(W * Hc);
+  for (let px = 0; px < W; px++) {
+    const col = Math.min(N - 1, Math.floor(px * N / W)), top = Math.round(w.heights[k * N + col] * s);
+    for (let py = 0; py < sub; py++) type[(H - 1 - py) * W + px] = 1;
+    let j = 1;
+    for (let py = 0; py < top; py++) {
+      while (j < k && w.heights[j * N + col] <= py / s) j++;   // first frame that reached this height
+      const i = (H - 1 - sub - py) * W + px; if (i < 0) break;
+      type[i] = 2; band[i] = j;
+    }
+  }
+  return { type, band, plotH: H, pxPerCellY: s, pxPerCellX: W / N };
+}
+function labelsTrench(w, k, W, Hc) {
+  const H = Hc - BAR, R = w.rows, C = w.cols, cs = Math.min(W / C, H / R), ox = (W - C * cs) / 2, oy = (H - R * cs) / 2;
+  const type = new Uint8Array(W * Hc), band = new Uint8Array(W * Hc);
+  for (let py = 0; py < H; py++) {
+    const cy = Math.floor((H - 1 - py - oy) / cs); if (cy < 0 || cy >= R) continue;
+    for (let px = 0; px < W; px++) {
+      const cx = Math.floor((px - ox) / cs); if (cx < 0 || cx >= C) continue;
+      const c = cy * C + cx, i = py * W + px, a = w.arrival[c];
+      if (w.substrate[c]) type[i] = 1;
+      else if (a <= k) { type[i] = 2; band[i] = a; }
+      else if (w.voidStart[c] <= k) type[i] = 3;
+    }
+  }
+  return { type, band, plotH: H, pxPerCellY: cs, pxPerCellX: cs };
+}
+
+// ---------- cross-sections ----------
+function drawView(i, k) {
+  const w = P.wafers[i], c = document.getElementById("xs" + i), [W, H] = fitCanvas(c), ctx = c.getContext("2d");
+  const L = w.kind === "1d" ? labels1d(w, k, W, H) : labelsTrench(w, k, W, H), sem = S.view === "sem";
+  const img = ctx.createImageData(W, H), d = img.data, filled = t => t === 1 || t === 2, lim = W * L.plotH;
+  for (let p = 0; p < W * H; p++) {
+    const t = L.type[p]; let r, g, b;
+    if (!sem) {
+      if (t === 0) { r = 11; g = 16; b = 22; }
+      else if (t === 1) { r = 75; g = 87; b = 100; }
+      else if (t === 2) [r, g, b] = filmColor(L.band[p]);
+      else { r = 255; g = 77; b = 61; }
+    } else {
+      // SEM-like: grey levels by material, surfaces facing empty space light up, plus grain noise
+      let v = t === 0 ? 20 : t === 1 ? 92 : t === 2 ? 160 + (Math.floor((L.band[p] - 1) / bandSize) % 2 ? -10 : 6) : 6;
+      if (filled(t)) for (const q of [p - 2, p + 2, p - 2 * W, p + 2 * W]) if (q >= 0 && q < lim && !filled(L.type[q])) { v += 70; break; }
+      v += (hash(p % W, (p / W) | 0) - 0.5) * 34;
+      r = g = b = clamp(v, 0, 255);
+    }
+    d[4 * p] = r; d[4 * p + 1] = g; d[4 * p + 2] = b; d[4 * p + 3] = 255;
+  }
+  if (sem) { const off = new OffscreenCanvas(W, H); off.getContext("2d").putImageData(img, 0, 0);
+             ctx.save(); ctx.filter = "blur(0.7px)"; ctx.drawImage(off, 0, 0); ctx.restore(); }
+  else ctx.putImageData(img, 0, 0);
+  caption(ctx, w, k, W, H, L, sem);
+  if (w.kind === "1d") drawAfm(i, k);
+  document.getElementById("m" + i).innerHTML = w.kind === "1d"
+    ? `<span>Rq <b>${fmt(w.rq[k])}</b> atoms</span><span>spec <b>${w.spec_text}</b></span>`
+    : `<span>step coverage <b>${fmt(w.step_coverage[k])}</b></span><span>trench void <b>${w.trench_void_area[k]}</b> cells</span>`
+      + `<span>density <b>${fmt(w.film_density[k])}</b></span><span>spec <b>${w.spec_text}</b></span>`;
+  const chip = document.getElementById("chip" + i), done = k === F && S.step >= DEPOSIT;
+  chip.className = "chip " + (done ? w.status : ""); chip.textContent = done ? w.status : "IN PROGRESS";
+}
+function caption(ctx, w, k, W, H, L, sem) {
+  ctx.font = "11px JetBrains Mono, monospace"; ctx.textBaseline = "middle";
+  const y = H - BAR / 2, ml = w.monolayers[k];
+  ctx.fillStyle = sem ? "#000" : "#0e141b"; ctx.fillRect(0, H - BAR, W, BAR);
+  // 1D views are not to scale: print which axis is stretched
+  const ve = L.pxPerCellY / L.pxPerCellX;
+  const stretch = ve > 1.5 ? `height ×${fmt(ve, ve < 10 ? 1 : 0)}` : ve < 0.67 ? `width ×${fmt(1 / ve, 1 / ve < 10 ? 1 : 0)}` : "";
+  const parts = [sem ? "SIMULATED SEM" : "IN-SITU", `${fmt(ml, 1)} ML ≈ ${fmt(ml * P.ml_nm, 1)} nm`, stretch].filter(Boolean);
+  ctx.fillStyle = "#d5e1ec"; ctx.fillText(parts.join(" · "), 8, y);
+  ctx.textAlign = "right";
+  if (!sem) {   // legend (only when there is room)
+    const items = [["substrate", "rgb(75,87,100)"], ["early", `rgb(${FILM_EARLY})`], ["late", `rgb(${FILM_LATE})`]];
+    if (w.kind === "trench") items.push(["void", "#ff4d3d"]);
+    let x = W - 8;
+    if (ctx.measureText(parts.join(" · ")).width + 260 < W)
+      for (const [name, col] of items.reverse()) { ctx.fillStyle = "#d5e1ec"; ctx.fillText(name, x, y); x -= ctx.measureText(name).width + 4;
+        ctx.fillStyle = col; ctx.fillRect(x - 10, y - 5, 10, 10); x -= 18; }
+  } else {      // scale bar: horizontal for trench (same scale both ways), vertical for 1D (thickness)
+    const nice = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500];
+    ctx.fillStyle = "#fff";
+    if (w.kind === "trench") {
+      const pxNm = L.pxPerCellX / P.ml_nm, nm = nice.find(n => n * pxNm > W * 0.12) || 500, len = nm * pxNm, bx = W - len - 14, by = H - BAR - 12;
+      ctx.fillRect(bx, by, len, 3); ctx.textAlign = "center"; ctx.fillText(`≈ ${nm} nm`, bx + len / 2, by - 9);
+    } else {
+      const pxNm = L.pxPerCellY / P.ml_nm, nm = nice.find(n => n * pxNm > L.plotH * 0.2) || 500, len = nm * pxNm, bx = W - 16, by = H - BAR - 10;
+      ctx.fillRect(bx, by - len, 3, len); ctx.fillText(`≈ ${nm} nm`, bx - 6, by - len / 2);
+    }
+  }
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+}
+function drawAfm(i, k) {
+  const w = P.wafers[i], c = document.getElementById("afm" + i), [W, H] = fitCanvas(c), ctx = c.getContext("2d"), N = w.n_columns;
+  let s = 0; for (let x = 0; x < N; x++) s += w.heights[k * N + x]; const m = s / N;
+  const img = ctx.createImageData(W, H), d = img.data;
+  for (let px = 0; px < W; px++) {
+    const t = clamp(0.5 + (w.heights[k * N + Math.min(N - 1, Math.floor(px * N / W))] - m) / (2 * w.afmRange), 0, 1);
+    const rgb = [clamp(2 * t, 0, 1), clamp(2 * t - 0.5, 0, 1), clamp(2 * t - 1, 0, 1)].map(v => v * 255);   // AFM "hot" scale
+    for (let py = 0; py < H; py++) { const p = 4 * (py * W + px); d[p] = rgb[0]; d[p + 1] = rgb[1]; d[p + 2] = rgb[2]; d[p + 3] = 255; }
+  }
+  ctx.putImageData(img, 0, 0);
+  ctx.font = "10px JetBrains Mono, monospace"; ctx.textBaseline = "middle";
+  const label = `AFM top view · height − mean, ±${fmt(w.afmRange, 1)} atoms`;
+  ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(4, 4, ctx.measureText(label).width + 10, 16);
+  ctx.fillStyle = "#f1e3d3"; ctx.fillText(label, 9, 12); ctx.textBaseline = "alphabetic";
+}
+
+// ---------- chamber (schematic) ----------
+const particles = [];
+function drawChamber(dt) {
+  const c = document.getElementById("chamber"), [W, H] = fitCanvas(c), ctx = c.getContext("2d"), w = P.wafers[S.sel];
+  ctx.clearRect(0, 0, W, H);
+  const bx = W * 0.12, bw = W * 0.76, by = 26, bh = H - 54;
+  ctx.fillStyle = "#0d141b"; ctx.strokeStyle = "#5c6d7e"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.fill(); ctx.stroke();
+  // pump port (arrows while pumping down)
+  const py = by + bh * 0.62;
+  ctx.fillStyle = "#18212c"; ctx.fillRect(bx + bw, py, 26, 26); ctx.strokeRect(bx + bw, py, 26, 26);
+  ctx.fillStyle = "#7b8a99"; ctx.font = "10px JetBrains Mono, monospace"; ctx.fillText("PUMP", bx + bw - 2, py + 40);
+  if (S.step === 1) { ctx.strokeStyle = "#38d6e8"; ctx.lineWidth = 2; const o = (performance.now() / 120) % 10;
+    for (let a = 0; a < 3; a++) { const x = bx + bw - 30 + a * 10 + o; ctx.beginPath(); ctx.moveTo(x, py + 7); ctx.lineTo(x + 6, py + 13); ctx.lineTo(x, py + 19); ctx.stroke(); } }
+  // magnetron + sputter target
+  const tx = bx + bw * 0.2, tw = bw * 0.6, ty = by + 16;
+  ctx.fillStyle = "#2b3542"; ctx.fillRect(tx, ty - 10, tw, 10);
+  const tg = ctx.createLinearGradient(0, ty, 0, ty + 14); tg.addColorStop(0, "#d38a4a"); tg.addColorStop(1, "#8a5226");
+  ctx.fillStyle = tg; ctx.fillRect(tx, ty, tw, 14);
+  ctx.fillStyle = "#7b8a99"; ctx.textAlign = "center"; ctx.fillText("SPUTTER TARGET", tx + tw / 2, by - 10); ctx.textAlign = "left";
+  // heated chuck + wafer (slides in during LOAD; film grows with deposited thickness)
+  const cy = by + bh - 46, cx = bx + bw * 0.18, cw = bw * 0.64, tcol = tempColor(S.chuckK);
+  ctx.save(); ctx.shadowColor = tcol; ctx.shadowBlur = clamp((S.chuckK - ROOM_K) / 6, 0, 30);
+  ctx.fillStyle = tcol; ctx.fillRect(cx, cy + 10, cw, 22); ctx.restore();
+  ctx.fillStyle = "#4b5866"; ctx.fillRect(cx + cw * 0.42, cy + 32, cw * 0.16, bh - (cy - by) - 32);
+  const wx = cx + cw * 0.06 + (1 - S.loadX) * bw, ww = cw * 0.88;
+  const frac = clamp(w.monolayers[Math.round(S.frame)] / Math.max(1e-9, w.monolayers[F]), 0, 1);
+  ctx.fillStyle = "#a6b3c1"; ctx.fillRect(wx, cy + 4, ww, 6);
+  ctx.fillStyle = COLORS[S.sel]; ctx.fillRect(wx, cy + 4 - 7 * frac, ww, 7 * frac);
+  // plasma glow and atom flux, both scaled with the deposition rate
+  const fluxNorm = w.flux ? clamp((Math.log10(w.flux) + 2) / 5, 0.05, 1) : 0.6;
+  if (S.step === DEPOSIT) {
+    const flick = 0.85 + 0.15 * Math.sin(performance.now() / 70) * Math.random();
+    const pg = ctx.createRadialGradient(tx + tw / 2, ty + 26, 4, tx + tw / 2, ty + 26, tw * 0.62);
+    pg.addColorStop(0, `rgba(196,120,255,${0.55 * flick * (0.4 + 0.6 * fluxNorm)})`); pg.addColorStop(1, "rgba(120,60,200,0)");
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.ellipse(tx + tw / 2, ty + 30, tw * 0.62, 34, 0, 0, Math.PI * 2); ctx.fill();
+    if (S.playing) { const n = Math.round((2 + 26 * fluxNorm) * dt / 16);
+      for (let a = 0; a < n; a++) particles.push({ x: tx + Math.random() * tw, y: ty + 16, vx: (Math.random() - 0.5) * 0.6, vy: 2.2 + Math.random() * 1.6 }); }
+  }
+  ctx.fillStyle = "#f2c27a";
+  for (let p = particles.length - 1; p >= 0; p--) { const q = particles[p];
+    if (S.playing) { q.x += q.vx * dt / 16; q.y += q.vy * dt / 16; }
+    if (q.y > cy + 2 || S.step !== DEPOSIT) { particles.splice(p, 1); continue; }
+    ctx.fillRect(q.x, q.y, 2, 2); }
+  // labels below the chamber so they never collide with the drawing
+  const ly = by + bh + 16;
+  ctx.fillStyle = "#d5e1ec"; ctx.font = "11px JetBrains Mono, monospace";
+  ctx.fillText(w.temperature ? `CHUCK ${Math.round(S.chuckK)} K / ${Math.round(S.chuckK - 273.15)} °C` : "CHUCK — no heater in this model", bx, ly);
+  ctx.fillStyle = "#7b8a99"; ctx.textAlign = "right"; ctx.fillText("schematic · not to scale", bx + bw, ly); ctx.textAlign = "left";
+}
+
+// ---------- readouts + trace (all wafers side by side) ----------
+function drawReadouts(k) {
+  const w = P.wafers[S.sel], ml = w.monolayers[k];
+  const rows = [
+    ["Step", STEPS[S.step]],
+    ["Chuck", w.temperature ? `${Math.round(S.chuckK)} K <small>${Math.round(S.chuckK - 273.15)} °C</small>` : "— <small>no heater</small>"],
+    ["Rate", w.flux ? `${fmt(w.flux, 3)} ML/s <small>${fmt(w.rate_nm_min, 2)} nm/min</small>` : "— <small>not modelled</small>"],
+    ["Deposited", `${fmt(ml, 1)} ML <small>≈ ${fmt(ml * P.ml_nm, 1)} nm</small>`],
+  ];
+  P.wafers.forEach((x, i) => {
+    const v = x.kind === "1d" ? `Rq ${fmt(x.rq[k])}` : `void ${x.trench_void_area[k]} · cov ${fmt(x.step_coverage[k])}`;
+    rows.push([`${x.wafer.split("-").pop()} ${x.label}`, `<span style="color:${COLORS[i]}">${v}</span>`]);
+  });
+  if (rows.length % 2) rows.push(["Lot", P.lot]);
+  document.getElementById("readouts").innerHTML = rows.map(([a, b]) => `<div class="ro"><div class="k">${a}</div><div class="v">${b}</div></div>`).join("");
+  document.getElementById("ro-recipe").textContent = w.recipe;
+  document.getElementById("chamber-title").textContent = `Process chamber · ${w.module}`;
+}
+function drawTrace(k) {
+  const c = document.getElementById("trace"), [W, H] = fitCanvas(c), ctx = c.getContext("2d"), w0 = P.wafers[0];
+  const key = w0.kind === "1d" ? "rq" : "trench_void_area";
+  document.getElementById("trace-title").textContent = w0.kind === "1d" ? "Rq (atoms) vs frame" : "Trench void (cells) vs frame";
+  let hi = 1e-9; for (const w of P.wafers) for (const v of w[key]) hi = Math.max(hi, v);
+  if (w0.spec_limit != null) hi = Math.max(hi, w0.spec_limit * 1.15, 1);
+  const Lm = 36, Rm = 10, T = 10, B = 10, X = j => Lm + (W - Lm - Rm) * j / F, Y = v => T + (H - T - B) * (1 - v / hi);
+  ctx.clearRect(0, 0, W, H); ctx.font = "10px JetBrains Mono, monospace";
+  ctx.strokeStyle = "#243140"; ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) { const y = T + (H - T - B) * g / 4; ctx.beginPath(); ctx.moveTo(Lm, y); ctx.lineTo(W - Rm, y); ctx.stroke(); }
+  ctx.fillStyle = "#7b8a99"; ctx.fillText(fmt(hi, hi < 10 ? 1 : 0), 4, T + 4); ctx.fillText("0", 4, H - B);
+  if (w0.spec_limit != null) {
+    ctx.strokeStyle = "#ff5a4e"; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(Lm, Y(w0.spec_limit)); ctx.lineTo(W - Rm, Y(w0.spec_limit)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#ff5a4e"; ctx.textAlign = "right"; ctx.fillText("spec", W - Rm, Y(w0.spec_limit) - 4); ctx.textAlign = "left";
+  }
+  P.wafers.forEach((w, i) => { ctx.strokeStyle = COLORS[i]; ctx.lineWidth = 2; ctx.beginPath();
+    for (let j = 0; j <= k; j++) j ? ctx.lineTo(X(j), Y(w[key][j])) : ctx.moveTo(X(j), Y(w[key][j])); ctx.stroke(); });
+  ctx.lineWidth = 1; ctx.strokeStyle = "#7b8a99"; ctx.beginPath(); ctx.moveTo(X(k), T); ctx.lineTo(X(k), H - B); ctx.stroke();
+}
+
+// ---------- process sequence (only DEPOSIT is simulated; the other steps are short transitions) ----------
+function setLeds() {
+  const set = (id, cls) => { document.getElementById(id).className = "led " + cls; };
+  set("led-run", S.step === INSPECT ? "green" : S.playing ? "cyan" : "amber");
+  set("led-vac", S.vac ? "green" : S.step === 1 ? "amber" : "");
+  set("led-heat", S.chuckK > ROOM_K + 5 ? "amber" : "");
+  set("led-rf", S.step === DEPOSIT ? "red" : "");
+  STEPS.forEach((_, i) => { document.getElementById("st" + i).className = "step" + (i < S.step ? " done" : i === S.step ? " active" : ""); });
+  document.getElementById("play").textContent = S.playing ? "⏸ PAUSE" : (S.step === INSPECT ? "⟲ REPLAY" : "▶ RUN");
+}
+function setView(v) { S.view = v; for (const [id, on] of [["v-insitu", v === "insitu"], ["v-sem", v === "sem"]]) document.getElementById(id).classList.toggle("on", on); }
+function next() { S.step = Math.min(INSPECT, S.step + 1); S.t = 0; if (S.step === INSPECT) { S.playing = false; if (S.autoSem) setView("sem"); } }
+function advance(dt) {
+  if (!S.playing) return;
+  S.t += dt;
+  if (S.step === 0) S.loadX = clamp(S.t / STEP_MS[0], 0, 1);
+  if (S.step === 1 && S.t > STEP_MS[1] * 0.7) S.vac = true;
+  if (S.step === 2) S.chuckK = ROOM_K + (setpoint() - ROOM_K) * clamp(S.t / STEP_MS[2], 0, 1);
+  if (S.step === DEPOSIT) {
+    S.frame = Math.min(F, S.frame + dt / 1000 * Number(document.getElementById("speed").value));
+    if (S.frame >= F) next(); return;
+  }
+  if (S.step === 4) S.chuckK = setpoint() + (ROOM_K - setpoint()) * clamp(S.t / STEP_MS[4], 0, 1);
+  if (S.step < INSPECT && S.t >= STEP_MS[S.step]) next();
+}
+function restart() {
+  const skip = document.getElementById("skip").checked;
+  Object.assign(S, { step: skip ? DEPOSIT : 0, t: 0, frame: 0, playing: true, chuckK: skip ? setpoint() : ROOM_K,
+                     vac: skip, loadX: skip ? 1 : 0, autoSem: true });
+  setView("insitu");
+}
+document.getElementById("play").onclick = () => { if (S.step === INSPECT) restart(); else S.playing = !S.playing; };
+document.getElementById("restart").onclick = restart;
+document.getElementById("v-insitu").onclick = () => { S.autoSem = false; setView("insitu"); };
+document.getElementById("v-sem").onclick = () => { S.autoSem = false; setView("sem"); };
+scrub.oninput = () => {
+  S.frame = Number(scrub.value); S.playing = false; S.vac = true; S.loadX = 1; S.t = 0;
+  if (S.frame >= F) { S.step = INSPECT; S.chuckK = ROOM_K; } else { S.step = DEPOSIT; S.chuckK = setpoint(); }
+};
+// deep link (also used by tests): #frame=40&view=sem opens paused at that frame
+(() => { const h = new URLSearchParams(location.hash.slice(1));
+  if (h.has("frame")) { const f = clamp(Number(h.get("frame")), 0, F);
+    Object.assign(S, { frame: f, playing: false, vac: true, loadX: 1, step: f >= F ? INSPECT : DEPOSIT, chuckK: f >= F ? ROOM_K : setpoint() }); }
+  if (h.has("view")) { S.autoSem = false; setView(h.get("view") === "sem" ? "sem" : "insitu"); } })();
+
+let drawn = { k: -1, view: "", width: 0, step: -1, sel: -1 };
+function loop(now) {
+  const dt = Math.min(64, now - S.last); S.last = now;
+  advance(dt);
+  drawChamber(dt);
+  const k = Math.round(S.frame), width = document.body.clientWidth;
+  if (k !== drawn.k || S.view !== drawn.view || width !== drawn.width || S.step !== drawn.step || S.sel !== drawn.sel) {
+    P.wafers.forEach((_, i) => drawView(i, k)); drawTrace(k);
+    drawn = { k, view: S.view, width, step: S.step, sel: S.sel };
+    scrub.value = k; document.getElementById("flabel").textContent = `frame ${k}/${F} · ${fmt(P.wafers[0].monolayers[k], 1)} ML`;
+  }
+  drawReadouts(k);
+  setLeds();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "settings": {
+    "n_columns": 200,
+    "n_atoms": 200000,
+    "repeats": 3,
+    "timing": "best of repeats, compile excluded"
+  },
+  "summary": {
+    "speedup": 127.81157233229716
+  },
+  "created_utc": "2026-10-11T11:09:42+00:00",
+  "python": "3.12.8",
+  "numpy": "2.5.3",
+  "pandas": "3.0.6"
+}
