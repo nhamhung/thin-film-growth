@@ -70,7 +70,9 @@ so every trench voids.
   * an **in-situ** cross-section coloured by growth time, with trench voids in red;
   * a **simulated SEM** rendering with a scale bar, shown automatically at *inspect*;
   * an AFM strip for the 1D modules.
-* **⇄ Compare with POR** runs your recipe and the POR with the same seed, side by side.
+* **⇄ Compare with POR** snapshots your recipe, runs it and the POR with the same seed, and shows both
+  replays plus an explicit settings/results/difference table. The control is disabled when the recipe already
+  matches the POR, avoiding a misleading duplicate comparison.
 * **Lot history:** each wafer gets an ID (`TF-0001-W03`), a PASS/FAIL against spec and a trend chart.
 * **Export:** standalone HTML replay, recipe/settings JSON, lot CSV.
 

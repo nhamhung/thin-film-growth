@@ -108,8 +108,19 @@ with st.sidebar:
     spec = fab.SPECS[module]
     st.caption(f"Spec: {spec['text'] if spec else 'none (monitor only)'}")
     run = st.button("▶ Run wafer", key="run_button", type="primary", width="stretch")
-    split = st.button("⇄ Compare with POR", key="split_button", width="stretch",
-                      help="Run your recipe and the POR side by side with the same seed")
+    split = st.button(
+        "✓ Recipe matches POR" if is_por else "⇄ Compare with POR",
+        key="split_button",
+        width="stretch",
+        disabled=is_por,
+        help=(
+            "This recipe already uses every POR process setting. Change at least one recipe control to compare."
+            if is_por
+            else "Run your recipe and the POR side by side with the same seed"
+        ),
+    )
+    if is_por:
+        st.caption("Change a recipe setting to enable a meaningful POR comparison.")
 
 
 # ---------------------------------------------------------------- simulation
@@ -135,41 +146,84 @@ def current_recipe() -> dict:
     return r
 
 
-def por_recipe() -> dict:
+def por_recipe(base_recipe: dict | None = None) -> dict:
     """The current recipe with the POR settings swapped in (same seed and frame count)."""
+    base = current_recipe() if base_recipe is None else dict(base_recipe)
     por = {k: float(v) if k in ("temperature", "flux", "n_monolayers") else v
            for k, v in IDEAL[module]["settings"].items()}
-    return {**current_recipe(), **por}
+    return {**base, **por}
 
 
 def process_wafer(r: dict, label: str) -> dict:
     """Simulate, spec-check and log one wafer; returns its player payload."""
+    recipe_module = r["module"]
+    recipe_is_thermal = recipe_module in THERMAL
     rec = simulate(**r)
     metrics = final_metrics(rec)
-    status = fab.spec_check(module, metrics)
+    status = fab.spec_check(recipe_module, metrics)
     wid = fab.wafer_id(LOT, len(st.session_state["history"]) + 1)
-    trench_dims = (r["trench_width"], r["trench_depth"]) if module == "trench" else None
-    name = fab.recipe_name(module, r["temperature"] if thermal else None, r["flux"] if thermal else None,
+    trench_dims = (r["trench_width"], r["trench_depth"]) if recipe_module == "trench" else None
+    name = fab.recipe_name(recipe_module, r["temperature"] if recipe_is_thermal else None,
+                           r["flux"] if recipe_is_thermal else None,
                            r["n_monolayers"], trench_dims)
-    row = {"wafer": wid, "module": fab.MODULES[module].split(" · ")[0], "module_key": module, "recipe": name,
+    row = {"wafer": wid, "module": fab.MODULES[recipe_module].split(" · ")[0],
+           "module_key": recipe_module, "recipe": name,
            "label": label, "result": status, "seed": r["seed"]}
-    if module == "trench":
+    if recipe_module == "trench":
         row.update({"void (cells)": metrics["trench_void_area"], "step coverage": metrics["step_coverage"],
                     "density": metrics["film_density"]})
     else:
         row.update({"Rq (atoms)": metrics["rq"]})
     st.session_state["history"].append(row)
-    return player.wafer_payload(rec, wafer=wid, label=label, module=module, recipe=name, status=status,
-                                temperature=r["temperature"] if thermal else None, flux=r["flux"] if thermal else None)
+    return player.wafer_payload(
+        rec,
+        wafer=wid,
+        label=label,
+        module=recipe_module,
+        recipe=name,
+        status=status,
+        temperature=r["temperature"] if recipe_is_thermal else None,
+        flux=r["flux"] if recipe_is_thermal else None,
+    )
+
+
+def comparison_table(wafers: list[dict], settings: list[dict]) -> pd.DataFrame:
+    """Build an explicit recipe-and-result comparison for the two simulated wafers."""
+    recipe, por = settings
+    current, reference = wafers
+    rows: list[tuple[str, object, object, str]] = []
+
+    def add_numeric(label: str, left: float, right: float, digits: int = 2) -> None:
+        fmt = f"{{:.{digits}f}}"
+        rows.append((label, fmt.format(left), fmt.format(right), f"{left - right:+.{digits}f}"))
+
+    if recipe["module"] in THERMAL:
+        add_numeric("Temperature (K)", recipe["temperature"], por["temperature"], 0)
+        add_numeric("Deposition rate (ML/s)", recipe["flux"], por["flux"], 3)
+    add_numeric("Film thickness (ML)", recipe["n_monolayers"], por["n_monolayers"], 0)
+    if recipe["module"] == "trench":
+        add_numeric("Trench width (cells)", recipe["trench_width"], por["trench_width"], 0)
+        add_numeric("Trench depth (cells)", recipe["trench_depth"], por["trench_depth"], 0)
+        add_numeric("Final trench void (cells)", current["trench_void_area"][-1],
+                    reference["trench_void_area"][-1], 0)
+        add_numeric("Final step coverage", current["step_coverage"][-1], reference["step_coverage"][-1], 2)
+        add_numeric("Final film density", current["film_density"][-1], reference["film_density"][-1], 2)
+    else:
+        add_numeric("Substrate width (columns)", recipe["n_columns"], por["n_columns"], 0)
+        add_numeric("Final Rq (atoms)", current["rq"][-1], reference["rq"][-1], 2)
+    rows.append(("Spec result", current["status"], reference["status"], "—"))
+    return pd.DataFrame(rows, columns=["Measure", "Your recipe", "POR", "Difference (recipe − POR)"])
 
 
 if run or split:
     with st.spinner("Simulating…"):
-        wafers, settings = [process_wafer(current_recipe(), "POR" if is_por else "RECIPE")], [current_recipe()]
+        recipe_snapshot = current_recipe()
+        wafers, settings = [process_wafer(recipe_snapshot, "RECIPE" if split else "POR" if is_por else "RECIPE")], [recipe_snapshot]
         if split:
-            wafers.append(process_wafer(por_recipe(), "POR"))
-            settings.append(por_recipe())
-        st.session_state["last_run"] = {"wafers": wafers, "settings": settings}
+            reference_recipe = por_recipe(recipe_snapshot)
+            wafers.append(process_wafer(reference_recipe, "POR"))
+            settings.append(reference_recipe)
+        st.session_state["last_run"] = {"wafers": wafers, "settings": settings, "comparison": split}
 
 hist = pd.DataFrame(st.session_state["history"])
 
@@ -185,6 +239,10 @@ with tab_run:
     else:
         html = player.build_html(last["wafers"], LOT)
         components.html(html, height=player.player_height(last["wafers"]))
+        if last.get("comparison"):
+            st.markdown("#### Recipe vs POR")
+            st.caption("Both wafers use the same random seed and frame count; positive differences mean your recipe is higher.")
+            st.dataframe(comparison_table(last["wafers"], last["settings"]), hide_index=True, width="stretch")
         with st.popover("⬇ Export"):
             name = last["wafers"][0]["wafer"]
             st.download_button("Replay (standalone HTML)", html, f"{name}_replay.html", mime="text/html")
