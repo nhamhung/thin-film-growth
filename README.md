@@ -24,7 +24,7 @@ watch any model grow live.
 
 ## Reports
 
-* [Project report](https://nhamhhung.github.io/thin-film-growth/) (*How Thin Films Grow*): methods, key results,
+* [Project report](https://nhamhung.github.io/thin-film-growth/) (*How Thin Films Grow*): methods, key results,
   findings and limitations.
 * [`report/user_guide.html`](report/user_guide.html) (*Using the Thin Film Growth Simulator*): a guided tour of
   the app with screenshots, hands-on experiments, troubleshooting and a glossary.
@@ -186,6 +186,6 @@ dataclass), so reruns reproduce `results/` exactly, given the same library
 versions, which are recorded in each `settings.json`.
 
 **Google Colab:** the first cell of each notebook gets the project code. It
-clones `github.com/nhamhhung/thin-film-growth` if that repository exists.
+clones `github.com/nhamhung/thin-film-growth` if that repository exists.
 Otherwise it mounts Google Drive and uses `MyDrive/thin_film_growth`, so copy
 the project folder there. It then installs Numba.
