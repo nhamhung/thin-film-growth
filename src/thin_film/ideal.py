@@ -30,8 +30,9 @@ IDEAL = {
         "why": "Smoothest film in the grid search (W = 0.91 after 50 ML vs 2.5 at 375 K / 1 ML/s). It is the "
                "coolest temperature at which slow deposition still maxes out the hops (1e4 per landing): "
                "atoms explore fully while bonds stay strong enough to hold them at good sites. "
-               "Faster alternative: 450 K at 1 ML/s gives W = 1.35 at 100x the deposition rate.",
-        "source": "results/phase3_process_window",
+               "All 30 test wafers passed the spec. Faster alternative: 450 K at 1 ML/s gives W = 1.35 at 100x "
+               "the deposition rate, but only 24 of 30 wafers pass.",
+        "source": "results/phase3_process_window, results/por_yield",
     },
     "trench": {
         "settings": {"temperature": 420, "flux": 1.0, "trench_width": 16, "trench_depth": 16, "n_monolayers": 24},
@@ -39,8 +40,8 @@ IDEAL = {
                "found (0.60 at 520 K) but 100 K cooler. Single wafers vary: 24 of 30 seeds pass the spec "
                "(the rest have coverage just under 0.50 or a 1-6 cell void), so expect ~80% yield. "
                "Geometry matters most: a trench must be about as wide as it is "
-               "deep. At width 8 / depth 16 no temperature or rate avoids a void. Faster alternatives with the "
-               "same quality: 460 K at 10 ML/s or 500 K at 100 ML/s.",
-        "source": "results/phase4_process_window",
+               "deep. At width 8 / depth 16 no temperature or rate avoids a void. 460 K at 10 ML/s is also "
+               "void-free on average and 10x faster, but only 16 of 30 wafers pass.",
+        "source": "results/phase4_process_window, results/por_yield",
     },
 }

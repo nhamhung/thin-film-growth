@@ -22,6 +22,16 @@ watch any model grow live.
 
 ![Phase 4 cross-sections](results/phase4_cross_sections/figure.png)
 
+## Reports
+
+* [Project report](https://nhamhhung.github.io/thin-film-growth/) (*How Thin Films Grow*): methods, key results,
+  findings and limitations.
+* [`report/user_guide.html`](report/user_guide.html) (*Using the Thin Film Growth Simulator*): a guided tour of
+  the app with screenshots, hands-on experiments, troubleshooting and a glossary.
+
+Render both local copies with
+`cd report && QUARTO_PYTHON=../.venv/bin/python quarto render report.qmd && quarto render user_guide.qmd`.
+
 ## The physics in one paragraph per phase
 
 **1. Random deposition.** Each atom lands in a random column and stays there.
@@ -128,6 +138,8 @@ src/thin_film/
   fab.py                 # fab vocabulary: unit conversions, recipe names, wafer IDs, specs
   recording.py           # record a run as compact frames for replay (exactly reproducible)
 scripts/run_phase{1..4}.py   # regenerate everything in results/
+scripts/run_por_yield.py      # single-wafer pass rates behind the specs
+report/                       # report.qmd (findings) + user_guide.qmd (app guide), rendered to HTML
 notebooks/0{1..4}_*.ipynb     # walkthroughs (local or Google Colab)
 app/streamlit_app.py          # app: recipe sidebar, run/compare, lot history
 app/fab_player.html           # in-browser replay: stepper, chamber, readouts, in-situ / SEM / AFM views
@@ -145,6 +157,7 @@ pip install -r requirements.txt
 
 pytest                                    # 47 validation, player and app tests, ~10 s
 for p in 1 2 3 4; do PYTHONPATH=src python scripts/run_phase$p.py; done   # ~1 min total
+PYTHONPATH=src python scripts/run_por_yield.py                          # POR pass rates, ~2 min
 streamlit run app/streamlit_app.py        # the app (run from the project root for the theme)
 ```
 
