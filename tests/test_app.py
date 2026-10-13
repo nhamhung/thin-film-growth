@@ -56,6 +56,21 @@ def test_compare_runs_recipe_and_por_side_by_side():
                                                 (s["trench_width"], s["trench_depth"]))
     wafers = at.session_state["last_run"]["wafers"]
     assert len(wafers) == 2 and wafers[0]["n_frames"] == wafers[1]["n_frames"]
+    assert at.session_state["last_run"]["settings"][0]["temperature"] == 300
+    assert at.session_state["last_run"]["settings"][1]["temperature"] == s["temperature"]
+    tables = [table.value for table in at.dataframe]
+    comparison = next(table for table in tables if "Difference (recipe − POR)" in table.columns)
+    temperature = comparison.loc[comparison["Measure"] == "Temperature (K)"].iloc[0]
+    assert temperature["Your recipe"] == "300"
+    assert temperature["POR"] == str(s["temperature"])
+
+
+def test_compare_is_disabled_when_recipe_already_matches_por():
+    at = fresh("thermal")
+    at.button(key="por_button").click().run()
+    button = at.button(key="split_button")
+    assert button.disabled
+    assert button.label == "✓ Recipe matches POR"
 
 
 def test_trench_sliders_survive_switching_module():
