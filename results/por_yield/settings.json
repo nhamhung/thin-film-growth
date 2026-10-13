@@ -1,0 +1,99 @@
+{
+  "settings": {
+    "n_seeds": 30,
+    "n_frames": 60,
+    "recipes": [
+      [
+        "thermal",
+        "POR",
+        375.0,
+        0.01
+      ],
+      [
+        "thermal",
+        "375 K, 1 ML/s",
+        375.0,
+        1.0
+      ],
+      [
+        "thermal",
+        "450 K, 1 ML/s",
+        450.0,
+        1.0
+      ],
+      [
+        "trench",
+        "POR",
+        420.0,
+        1.0
+      ],
+      [
+        "trench",
+        "460 K, 10 ML/s",
+        460.0,
+        10.0
+      ],
+      [
+        "trench",
+        "370 K, 1 ML/s",
+        370.0,
+        1.0
+      ]
+    ],
+    "specs": {
+      "thermal": {
+        "rq_max": 2.0,
+        "text": "Rq \u2264 2.0 atoms (100 ML film)"
+      },
+      "trench": {
+        "void_max": 0,
+        "coverage_min": 0.5,
+        "text": "trench void = 0 and step coverage \u2265 0.50"
+      }
+    }
+  },
+  "summary": {
+    "pass_counts": [
+      {
+        "module": "thermal",
+        "recipe": "POR",
+        "sum": 30,
+        "count": 30
+      },
+      {
+        "module": "thermal",
+        "recipe": "375 K, 1 ML/s",
+        "sum": 2,
+        "count": 30
+      },
+      {
+        "module": "thermal",
+        "recipe": "450 K, 1 ML/s",
+        "sum": 24,
+        "count": 30
+      },
+      {
+        "module": "trench",
+        "recipe": "POR",
+        "sum": 24,
+        "count": 30
+      },
+      {
+        "module": "trench",
+        "recipe": "460 K, 10 ML/s",
+        "sum": 16,
+        "count": 30
+      },
+      {
+        "module": "trench",
+        "recipe": "370 K, 1 ML/s",
+        "sum": 9,
+        "count": 30
+      }
+    ]
+  },
+  "created_utc": "2026-10-13T04:28:40+00:00",
+  "python": "3.12.8",
+  "numpy": "2.5.3",
+  "pandas": "3.0.6"
+}
