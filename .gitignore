@@ -5,3 +5,6 @@ __pycache__/
 .ruff_cache/
 .ipynb_checkpoints/
 .DS_Store
+
+# Local Jupyter kernels/settings created by the launcher (scripts/launch.py)
+.jupyter_data/

@@ -1,5 +1,8 @@
 # Thin Film Growth: Monte Carlo Simulation
 
+> **New to Python, or just want to try it?** See [START_HERE.md](START_HERE.md): download the ZIP,
+> double-click `start_windows.bat` (Windows) or `start_mac.command` (macOS), and it sets everything up.
+
 Monte Carlo models of atoms depositing onto a surface. The project asks two
 questions that matter in thin-film deposition in semiconductor fabs:
 
@@ -26,11 +29,12 @@ watch any model grow live.
 
 * [Project report](https://nhamhung.github.io/thin-film-growth/) (*How Thin Films Grow*): methods, key results,
   findings and limitations.
-* [`report/user_guide.html`](report/user_guide.html) (*Using the Thin Film Growth Simulator*): a guided tour of
-  the app with screenshots, hands-on experiments, troubleshooting and a glossary.
+* [Beginner's guide](https://nhamhung.github.io/thin-film-growth/beginners-guide.html): a plain-language introduction
+  to the science, simulations and main results.
+* [Simulator user guide](https://nhamhung.github.io/thin-film-growth/user-guide.html): a guided tour of the app with
+  screenshots, three hands-on experiments, troubleshooting and a glossary.
 
-Render both local copies with
-`cd report && QUARTO_PYTHON=../.venv/bin/python quarto render report.qmd && quarto render user_guide.qmd`.
+Render with `cd report && QUARTO_PYTHON=../.venv/bin/python quarto render report.qmd && quarto render user_guide.qmd`.
 
 ## The physics in one paragraph per phase
 
@@ -80,9 +84,7 @@ so every trench voids.
   * an **in-situ** cross-section coloured by growth time, with trench voids in red;
   * a **simulated SEM** rendering with a scale bar, shown automatically at *inspect*;
   * an AFM strip for the 1D modules.
-* **⇄ Compare with POR** snapshots your recipe, runs it and the POR with the same seed, and shows both
-  replays plus an explicit settings/results/difference table. The control is disabled when the recipe already
-  matches the POR, avoiding a misleading duplicate comparison.
+* **⇄ Compare with POR** runs your recipe and the POR with the same seed, side by side.
 * **Lot history:** each wafer gets an ID (`TF-0001-W03`), a PASS/FAIL against spec and a trend chart.
 * **Export:** standalone HTML replay, recipe/settings JSON, lot CSV.
 
@@ -140,7 +142,7 @@ src/thin_film/
 scripts/run_phase{1..4}.py   # regenerate everything in results/
 scripts/run_por_yield.py      # single-wafer pass rates behind the specs
 report/                       # report.qmd (findings) + user_guide.qmd (app guide), rendered to HTML
-notebooks/0{1..4}_*.ipynb     # walkthroughs (local or Google Colab)
+notebooks/0{1..5}_*.ipynb     # step-by-step guides for beginners (local or Google Colab), see below
 app/streamlit_app.py          # app: recipe sidebar, run/compare, lot history
 app/fab_player.html           # in-browser replay: stepper, chamber, readouts, in-situ / SEM / AFM views
 app/player.py                 # packs recordings into the player page
@@ -161,29 +163,24 @@ PYTHONPATH=src python scripts/run_por_yield.py                          # POR pa
 streamlit run app/streamlit_app.py        # the app (run from the project root for the theme)
 ```
 
-## Deploy your own copy
-
-The app is self-contained: it generates simulation data locally and does not
-need API keys, secrets or an external dataset.
-
-1. Fork this repository on GitHub.
-2. Sign in to [Streamlit Community Cloud](https://share.streamlit.io/) with the
-   GitHub account that owns the fork.
-3. Select **Create app** and use:
-   - Repository: `<your-user>/thin-film-growth`
-   - Branch: `main`
-   - Main file path: `app/streamlit_app.py`
-4. In **Advanced settings**, keep Python **3.12**. No secrets are required.
-5. Select **Deploy**.
-
-Streamlit installs the smaller runtime-only dependency list in
-`app/requirements.txt`. Pushes to `main` update the deployed app automatically.
-The included GitHub Actions workflow checks formatting, the scientific model,
-the Streamlit interface, dependencies and committed secrets.
-
 Every random draw comes from a fixed seed (`seed` in each settings
 dataclass), so reruns reproduce `results/` exactly, given the same library
 versions, which are recorded in each `settings.json`.
+
+## Notebooks
+
+Five step-by-step guides for readers with basic Python and no physics background. Run them in order, top to
+bottom, with the *Thin Film Growth* kernel (`thin-film-growth`, this `.venv`). Each one runs a tiny simulation by hand
+next to the project's function, scales up, reproduces the saved `results/`, and ends with a step → module → script
+map and exercises. They only read `results/` and never write project files.
+
+| Notebook | Covers | Runtime |
+|---|---|---|
+| `01_random_deposition` | seeds and Monte Carlo, the deposition rule by hand, roughness W, log-log fits and beta, exact binomial theory | ~5 s |
+| `02_surface_relaxation` | the relaxation rule by hand, beta, saturation, alpha, data collapse, Numba JIT and timing, identical-output check | ~5 s |
+| `03_temperature_model` | kT, Arrhenius and flux to (epsilon, hops), the hop rule by hand vs the Numba kernel, sweeps, noise, process window, thermal POR | ~40 s |
+| `04_trench_filling` | the trench grid, falling/sticking/hopping by hand vs Numba, flood-fill void detection, `measure` by hand, sweeps, hop cap, process window, trench POR | ~35 s |
+| `05_por_yield_and_app` | POR recipes, fab units and specs, recording and replay, single-wafer yield, how the Streamlit app and player fit together | ~25 s |
 
 **Google Colab:** the first cell of each notebook gets the project code. It
 clones `github.com/nhamhung/thin-film-growth` if that repository exists.
