@@ -26,9 +26,11 @@ jobs:
         run: |
           test -s report/report.html
           test -s report/user_guide.html
+          test -s report/beginners_guide.html
           mkdir -p _site
           cp report/report.html _site/index.html
           cp report/user_guide.html _site/user-guide.html
+          cp report/beginners_guide.html _site/beginners-guide.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

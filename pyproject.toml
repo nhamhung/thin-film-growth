@@ -1,3 +1,30 @@
+[project]
+name = "thin-film-growth"
+version = "1.0.0"
+description = "Monte Carlo simulation of thin-film growth, trench filling and a fab-style app"
+requires-python = ">=3.12,<3.13"
+# Exact versions the project was built and tested with (uv.lock pins everything else).
+dependencies = [
+    "numpy==2.5.3",
+    "scipy==1.18.1",
+    "pandas==3.0.6",
+    "matplotlib==3.11.2",
+    "numba==0.68.0",
+    "streamlit==1.65.0",
+    "altair==6.3.0",
+    "pillow==12.3.0",
+    "jupyterlab==4.6.4",
+    "ipykernel==7.4.0",
+]
+
+[dependency-groups]
+dev = ["pytest==9.1.1", "ruff==0.17.0"]
+
+[tool.uv]
+package = false  # a project folder, not an installable library
+# 26.x ships no ready-built wheel for Intel Macs; 25.x does (needed by JupyterLab).
+constraint-dependencies = ["argon2-cffi-bindings<26"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 110
